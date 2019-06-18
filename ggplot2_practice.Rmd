@@ -1,0 +1,17 @@
+---
+title: "ggplot2_practice"
+author: "Leslie Roberson"
+date: "6/19/2019"
+output: html_document
+---
+
+---
+title: "Graphics with ggplot2"
+author: "Julie"
+date: "11/21/2017"
+output: html_document
+---
+
+# Learning ggplot2
+
+We're learning ggplot2 It's going to be amazing.
