@@ -44,5 +44,63 @@ benthic <- benthic %>%
   mutate(date = stringr::str_remove_all(id_date, "#"))
 
 ```
+use skimr to explore data 
+```{r}
+skimr::skim(benthic) # I like this one
+
+unique(benthic$id_name)
+
+ggplot(data = benthic, 
+       aes(date, fill = id_name)) +
+  geom_bar()
+```
+#Buoy data!
+```{r buoy data}
+#import buoy data
+buoy_raw <- readr::read_csv(buoy_url) # this doesn't work bc it's not a csv
+
+buoy_raw <- readr::read_table2(buoy_url) 
+head(buoy_raw) 
+```
+# Wrangle 
+```{r}
+buoy <- buoy_raw
+names(buoy)
+
+# overwrite current column names
+names(buoy) <- str_c( # joins multiple strings into a single string
+  names(buoy),
+  buoy %>% filter(`#YY`== "#yr"), # find the row where column #YY = #yr
+  sep = "_")
+
+# clean up hashes and slashes 
+names(buoy) <- str_replace_all(names(buoy), "#", "") # replace # with nothing
+names(buoy) <- str_replace_all(names(buoy), "/", "")
+
+#remove redundant row
+buoy <- buoy %>%
+  filter(`YY_yr` != "#yr") # keep anything that isn't that first row
+```
+#Explore!
+```{r}
+ggplot(buoy, aes(WTMP_degC)) +
+  geom_bar() # still really messy lots of things to do
+```
+# join!
+```{r}
+head(benthic)
+head(buoy)
+
+# unite buoy dates so they look the same as the benthic dates
+buoy <- buoy %>% 
+  unite(date, c(YY_yr, MM_mo, DD_dy), sep = "-") # make new col called date by uniting the year month day cols in that order
+bb_join <- benthic %>% 
+  left_join(buoy, by = "date") # something's wrong, it's too huge
+# figure out why
+# ok lots of repeated rows 
+rm(bb_join)
+```
+
+
 
 
