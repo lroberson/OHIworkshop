@@ -35,6 +35,13 @@ gapminder %>% filter(country=="Brazil", year >= 1987 & year <= 2007) %>%
   summarise(mean = mean(lifeExp))
 
 ```
+Piping = "and then..."
+```{r}
+#Shortcut for pipe = cmd + shift + m
+gapminder %>% 
+  filter(continent == "Asia", year == 2007) %>%
+  mutate(pop1000 = pop/1000)
+```
 
 
 
