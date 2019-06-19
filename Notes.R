@@ -1,3 +1,6 @@
+# Their manual
+http://ohi-science.org/data-science-training/
+
 # keyboard shortcuts
 
 ## alt shift k #    >> keyboard shortcut list

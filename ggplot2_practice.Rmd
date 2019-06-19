@@ -1,17 +1,110 @@
 ---
-title: "ggplot2_practice"
+title: "Graphics with ggplot2"
 author: "Leslie Roberson"
 date: "6/19/2019"
 output: html_document
 ---
 
----
-title: "Graphics with ggplot2"
-author: "Julie"
-date: "11/21/2017"
-output: html_document
----
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
 
-# Learning ggplot2
+## Learning ggplot2
 
 We're learning ggplot2 It's going to be amazing.
+
+Load tidyverse
+```{r tidyverse}
+library(tidyverse)
+```
+
+## download data
+
+```{r data}
+
+ohi_data <- read_csv("https://raw.githubusercontent.com/OHI-Science/data-science-training/master/data/OHI_global_data.csv")
+
+```
+
+we start!
+
+```{r start ggplot}
+
+ggplot(data=ohi_data, aes(x=georegion_one, y=OHI_score)) +
+  geom_point()
+
+ggplot(data=ohi_data, aes(x=georegion_one, y=OHI_score)) +
+  geom_jitter(width = 0.8)
+  
+```
+Boxplot
+```{r boxplot}
+ggplot(data=ohi_data, aes(x=georegion_one)) +
+  geom_bar()
+```
+Histogram
+```{r hist}
+ggplot(data=ohi_data, aes(x=HDI)) +
+  geom_histogram()
+```
+Multiple geoms layering in the same plot
+
+```{r multiple geoms}
+ohi_summ <- read_csv("https://raw.githubusercontent.com/OHI-Science/data-science-training/master/data/OHI_scores_georegion_summary.csv")
+
+ggplot(data = ohi_summ, aes(x = georegions, y = OHI_score_average)) +
+  geom_bar(stat="identity") + #to make it a variable instead of just count of number of rows
+  geom_jitter(data = ohi_data, aes(x=georegion_one, y = OHI_score))
+
+# can put your aesthics in the ggplot 
+ggplot(data = ohi_data, aes(y = OHI_score, x = HDI, color = georegion_one)) +
+  geom_point()
+# Can also put your aesthetics in the geom section
+# this is better for plots with many layers
+ggplot(dat=ohi_data) +
+  geom_point(aes(y=OHI_score, x = HDI, color = georegion_one))
+# anything that's in aes has to link to a column in your data
+ggplot(dat=ohi_data) +
+  geom_point(aes(y=OHI_score, x = HDI, color = coastal_pop))
+```
+Adding a third discrete variable
+```{r discrete var}
+ggplot(data=ohi_data, aes(x=OHI_score, y = HDI, shape=georegion_one)) +
+  geom_point()
+```
+quickly customize things with themes
+```{r themes}
+ggplot(data=ohi_data, aes(x=OHI_score, y = HDI, color=georegion_one)) +
+  geom_point() +
+  theme_bw()
+# get extra themes
+http://www.ggplot2-exts.org/gallery/
+```
+change labels
+```{r labels}
+
+```
+color
+```{r RColorBrewer}
+https://github.com/EmilHvitfeldt/r-color-palettes
+colorbrewer2.org # for interaction checking palettes
+library(RColorBrewer)
+
+display.brewer.all()
+
+my_palette <- brewer.pal(n = 9, "YlOrRd") # uses hexadecimal to represent colors
+# color scales boil down to whether your data is discrete or continuous
+
+# Discrete
+scale_color_manual() # go with this first
+scale_fill_manual()
+# Continuous
+scale_color_gradientn()
+scale_fill_gradientn()
+
+```
+
+
+
+
+
