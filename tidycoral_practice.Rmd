@@ -1,0 +1,48 @@
+---
+title: "tidycoral_practice"
+author: "Leslie Roberson"
+date: "6/19/2019"
+output: html_document
+---
+
+```{r setup, warning = FLASE, message = FALSE}
+library(tidyverse)
+library(janitor) # install.packages("janitor")
+library(skimr) # install.packages("skimr")
+library(stringr) # install.packages("stringr)
+```
+
+## more shortcuts
+
+Highlight between words = option + shift
+Highlight sections and hop left or right = option + shift + arrow
+Hope to end but don't hightlight anything = cmd + arrow 
+arrow = option + minus
+cmd + option + i = new code chunk
+```{r load data}
+## benthic data
+benthic_url <- 'https://www.nodc.noaa.gov/archive/arc0054/0104255/1.1/data/0-data/cd08/100308OaAla03m.CSV'
+## buoy data
+buoy_url <- 'http://www.ndbc.noaa.gov/view_text_file.php?filename=mokh1h2010.txt.gz&dir=data/historical/stdmet/'
+```
+
+```{r benthic raw}
+benthic_raw <- read_csv(benthic_url)
+head(benthic_raw)
+```
+# Wrangle
+One hash makes the header bold
+```{r}
+benthic <- benthic_raw %>%
+  janitor::clean_names()  # keep track/specify where this function comes from or force r to use that package
+# explore
+head(benthic)
+
+# select our columns
+benthic <- benthic %>%
+  select(id_name, point, x, y, id_date) %>%
+  mutate(date = stringr::str_remove_all(id_date, "#"))
+
+```
+
+
