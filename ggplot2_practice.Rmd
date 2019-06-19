@@ -13,6 +13,8 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 
 We're learning ggplot2 It's going to be amazing.
 
+ggplot2 is Good for everything except raster plots, and maybe spatial polygon plots 
+
 Load tidyverse
 ```{r tidyverse}
 library(tidyverse)
