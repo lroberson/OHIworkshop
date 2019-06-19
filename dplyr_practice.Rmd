@@ -1,0 +1,45 @@
+---
+title: "dplyr_practice"
+author: "Leslie Roberson"
+date: "6/19/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## general tips
+
+Keep your raw data raw!
+And think about where to store it - on a server?
+Shortcut for a code chunk: cmd + alt + i 
+
+```{r load gapminder data}
+library(tidyverse)
+gapminder <- read_csv("https://raw.githubusercontent.com/OHI-Science/data-science-training/master/data/gapminder.csv")
+# in long format: vars are cols, obs are rows
+head(gapminder)
+str(gapminder)
+ncol(gapminder)
+```
+learning the filter function
+```{r filter}
+filter(gapminder, country == "Mexico", year = 2007)
+
+gapminder %>% filter(country=="Brazil", year >= 1987, year <= 2007) %>%
+  summarise(mean = mean(lifeExp))
+# or
+filter(between(year, 1987, 2007))
+gapminder %>% filter(country=="Brazil", year >= 1987 & year <= 2007) %>%
+  summarise(mean = mean(lifeExp))
+
+```
+
+
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
