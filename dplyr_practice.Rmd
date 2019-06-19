@@ -41,12 +41,25 @@ Piping = "and then..."
 gapminder %>% 
   filter(continent == "Asia", year == 2007) %>%
   mutate(pop1000 = pop/1000)
+
+gapminder %>%
+  mutate(gdp = gdpPercap*pop) %>%
+  group_by(continent) %>%
+  summarise(maxgdp = max(gdp)) %>%
+  select(continent,maxgdp)
+# OR
+gapminder %>%
+  mutate(gdp = gdpPercap*pop) %>%
+  group_by(continent) %>%
+  mutate(maxgdp = max(gdp)) %>%
+  filter(gdp == maxgdp)
+# keeps all the columns so you still see the countries
 ```
 
 
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r plot, echo=FALSE}
+# Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
