@@ -10,13 +10,15 @@ https://r4ds.had.co.nz/
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
 ```
 
 ## instructions:
 SCCS_R_workshop_2019.html
 
 ```{r load data}
-summary(cars)
+dat_raw <- read_csv("/Users/leslieroberson/OneDrive - The University of Queensland/_data/_raw_data/SCCS_Workshop_2019/SCCS_data-for-course/copepods_raw.csv")
 ```
 
 
