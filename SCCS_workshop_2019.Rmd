@@ -1,0 +1,22 @@
+---
+title: "SCCS_workshop_2019"
+author: "Leslie Roberson"
+date: "7/10/2019"
+output: html_document
+---
+
+## Hadley's book
+https://r4ds.had.co.nz/
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## instructions:
+SCCS_R_workshop_2019.html
+
+```{r load data}
+summary(cars)
+```
+
+
