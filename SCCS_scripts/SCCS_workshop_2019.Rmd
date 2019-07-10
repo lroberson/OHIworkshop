@@ -12,6 +12,11 @@ https://r4ds.had.co.nz/
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
+library(sf)
+library(maps)
+library(maptools)
+library(rgeos)
+library(mapproj)
 ```
 
 ## instructions:
@@ -293,5 +298,129 @@ We should also save the standardised data for use later:
 ```{r write_csv}
 write_csv(x = dat_std, path = "SSCS_data/spatial-data/copepods_standardised.csv")
 ```
+## Multipanel ggplots
+ggplot2 isn’t limited to single panel plots. And that is just as well, because we have a sneaking suspicion that Prof Calanoid might have neglected to tell us something else about the data.
 
+You might have noticed the CPR data covers both the East and West Coast of Australia, and the Southern Ocean. Well it would be fair to say that different ocean basins might have slightly different latitudinal patterns of richness.
+
+So let’s investigate patterns by different oceans. You may have noticed that there is a region variable in the routes dataframe. Well that is joined into our standardized samples, so why don’t we start by just plotting the samples coloured by  region to check it out:
+
+```{r ggplot group and color}
+ggplot(dat_std, 
+       aes(x = longitude, y = latitude, group = region, color = region)) +
+  geom_point()
+```
+Looks like a good place to start. We could plot all the results, colouring by ocean basins like this:
+
+```{r ggplot with trendlines}
+ggplot(dat_std, 
+       aes(x = latitude, y = richness, color = region, group = region)) +
+  geom_point(size = 0.1) +
+  geom_smooth() 
+```
+Notice that the use of group = region has meant that ggplot fits a smooth curve to each region too. Pretty handy, now we can see what looks like an interaction between latitude and East vs West. It also looks like the southern ocean pattern is a continuation of the West coast pattern.
+
+By specifying size = 0.1 we reduce the size of the points to make the trend stand out.
+
+These results are pretty exciting, but when we email this plot to Prof Calanoid she complains that the East and West data are too hard to tell apart.
+
+Since the plot is a bit busy, it might help Prof Calanoid see these stunning results if we ‘facet’ by region.
+
+```{r}
+# Here's a fun trick: by wrapping the entire ggplot call and object assignment in parentheses, we can both save the plot as an object (cope_smooth) and view the plot without having to re-type 'cope_smooth'
+
+(cope_smooth <- 
+   ggplot(dat_std, aes(x = latitude, y = richness, group = region, color = region)) +
+   geom_point(size = 0.1) +
+   geom_smooth() +
+   facet_grid(. ~ region) + #facet_grid adds the facets.  The . ~ region simply means add regions in columns versus nothing (.) in rows. If we replaced the . with another category, like project it would create a grid with rows and columns.
+   theme_bw())
+
+ggplot(dat_std, aes(x = latitude, y = richness, group = region, color = region)) +
+   geom_point(size = 0.1) +
+   geom_smooth() +
+   facet_grid(route ~ region) + # replaced the . with another category to create a grid with rows and columns.
+   theme_bw()
+```
+
+We wanted to compare the smooths across regions, so we’ve put regions all on one row this time. These plots are helpful because it allows for a quick and easy visual check for interactive effects. It is pretty clear now that we need to be cautious interpreting regional differences between the species richness * latitude relationship because there is no overlap in latitude between the Southern Ocean and the other two regions.
+
+The only other change we made was to add the theme_bw layer, which, most noticeably, changes the background colour from gray to white.
+
+```{r ggsave}
+ggsave(plot = cope_smooth, filename = "figs/richness-latitude-smooth.jpeg",
+       width = 16, height = 10, units = "cm", dpi = 300)
+```
+## Grouping and summarizing
+All the plots and pretty smooths are nice, but seeing the hard numbers can be useful too. Prof Calanoid is interested to see how richness changes according to the different survey routes.
+
+To do this we’re going to get into grouping with the group_by function followed by summarize to derive summary statistics for each group.
+
+group_by adds a tag to the dataframe to indicate what variables to group the data by prior to calculating summary statistics (e.g., mean).
+
+Let’s see the two functions in action.
+
+```{r group and summarize}
+### how many rows in data_std
+nrow(dat_std)
+### how many different routes in dat_std
+n_distinct(dat_std$route)
+### group dat_std by route
+datg <- group_by(dat_std, route)
+# or with a pipe
+dat_std %>% group_by(., route)
+```
+Look at datg to convince yourself that the data themselves have not changed, but if you type datg into the console it will print out Groups: route [25], indicating the data is grouped by 25 routes.
+
+What we want to do is put group_by together with a summarize:
+
+```{r group and summarise}
+(dat_std_sum <- 
+   summarize(datg,
+             mean_rich = mean(richness),
+             sd_rich = sd(richness),
+             n = n())) # the counts I think
+```
+With piping, The argument dat_std before the %>% just gets dropped in place of the .. Pipes are handy for chaining together multi-step operations on dataframes, like grouping, summarizing, and mutating. For most pipe-compatible functions, the . is not even needed, which makes our code even nicer to read.
+
+Here we calculate the mean and standard deviation of richness for each route, as well as the number of rows (samples) n() for each route:
+
+```{r piping}
+dat_std_sum <- 
+  dat_std %>% 
+  group_by(route) %>%
+  summarize(mean_rich  = mean(richness),
+            sd_rich = sd(richness),
+            n = n())
+```
+Here we combine group_by, mutate, summarize, and ggplot using piping to plot the mean (+/- standard error) species richness by route, where routes are sorted by latitude on the x-axis
+
+```{r group_by, mutate, summarize, and ggplot}
+dat_std %>% 
+  group_by(route, meanlat, meanlong) %>%
+  summarize(mean_rich  = mean(richness),
+            sd_rich = sd(richness),
+            n = n(), 
+            se_rich = sd_rich / sqrt(n)) %>%
+  ungroup() %>%
+  mutate(route = fct_reorder(.f = route, .x = meanlat, .fun = max)) %>%
+  ggplot(aes(x = route, y = mean_rich)) +
+  geom_linerange(aes(ymin = mean_rich - se_rich, ymax = mean_rich + se_rich)) +
+  geom_point()
+```
+## Introduction to mapping and spatial analysis in R
+In the first section we tidied up Prof Calanoid’s and conducted some exploratory (mostly visual) analyses of the relationship between latitude and species richness. But the job isn’t done yet.
+
+Prof Calanoid’s actual hypothesis was about sea surface temperature and she also wanted to see some maps and for us to create an interactive map to share with funders.
+
+In this section of the course we will look at how to combine our copepod data with spatial layers for temperature and then create nice static and interactive maps.
+
+#A simple map of sample sites
+Let’s work from the dat_std:
+
+```{r overlay on worldmap}
+names(dat_std)
+
+
+```
 
