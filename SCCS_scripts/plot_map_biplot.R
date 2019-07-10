@@ -258,6 +258,8 @@ p3<-recordPlot()
 
 cols<-unique(toy_df$color)#get vector of colors from dataframe
 
+# here he's using rasterVis instead of ggplot2, and adding layers just like you would for geom_point or whatever
+# then lattice extra is another package which adds the scale bar and north arrows with the layer function
 map_logan_cont<- rasterVis::levelplot(association_raster_cont, 
                                  margin=FALSE,                       # suppress marginal graphics
                                  colorkey=FALSE,

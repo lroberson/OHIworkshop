@@ -21,6 +21,7 @@ library(maps) # install.packages("maps")
 library(maptools) # install.packages("maptools")
 library(rgeos)
 library(mapproj) # install.packages("mapproj")
+library(rastervis) # install.packages("mapproj")
 ```
 
 ## instructions:
