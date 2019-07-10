@@ -12,16 +12,7 @@ https://r4ds.had.co.nz/
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
-library(sf)
-library(sp) 
-# for lines, points and polygons
-# has a bounding box 
-# also tells you the projection of the CRS object 
-library(maps) # install.packages("maps")
-library(maptools) # install.packages("maptools")
-library(rgeos)
-library(mapproj) # install.packages("mapproj")
-library(rastervis) # install.packages("mapproj")
+
 ```
 
 ## instructions:
@@ -413,73 +404,4 @@ dat_std %>%
   geom_linerange(aes(ymin = mean_rich - se_rich, ymax = mean_rich + se_rich)) +
   geom_point()
 ```
-## Introduction to mapping and spatial analysis in R
-In the first section we tidied up Prof Calanoid’s and conducted some exploratory (mostly visual) analyses of the relationship between latitude and species richness. But the job isn’t done yet.
 
-Prof Calanoid’s actual hypothesis was about sea surface temperature and she also wanted to see some maps and for us to create an interactive map to share with funders.
-
-In this section of the course we will look at how to combine our copepod data with spatial layers for temperature and then create nice static and interactive maps.
-
-## Useful functions and packages:
-
-# sp package
-spsample() samples the points from your data set
-bbox()
-CRS() to assign a CRS to that layer to make an object 
-# sf package
-
-# readOGR() to read vector layers
-
-# Raster package
-RasterLayer, raster() to read one raster layer
-RasterStacks, stack() to read many raster layers 
-
-## link to Melanie's guide on CRS:
-https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/OverviewCoordinateReferenceSystems.pdf
-
-## colorbrewer2.org
-To test all sorts of color palettes 
-
-#A simple map of sample sites
-Let’s work from the dat_std:
-
-```{r overlay on worldmap}
-names(dat_std)
-
-### code for mapping using ggplot package
-# map(database = 'world')
-# points(dat_std$longitude, dat_std$latitude)
-
-### convert world map to a simple features suitable for ggplot
-world1 <- sf::st_as_sf(map(database = 'world', plot = FALSE, fill = TRUE))
-
-ggplot() +
-  geom_sf(data = world1) +
-  geom_point(data = dat_std, aes(x = longitude, y = latitude))
-```
-Note: we’ve used ggplot(), with nothing in the brackets. That is because we plotted multiple layers, each with a different data source, so we need to specify the data provided to each geom separately (data = world1 for geom_sf() and data = cope for geom_point).
-
-This map looks ok, but we needn’t represent the entire world here. Let’s make a few modifications to our map. We can set x-limits and y-limits just like a normal plot. Also, let’s colour the land and ocean: good general guidance for making maps is to have the ocean white and land shaded if you are mapping sites in the ocean and vice-versa if you are mapping sites on land.
-
-```{r range}
-### longitudinal extent (x limits)
-range(dat_std$longitude)
-### latitudinal extent (y limits)
-range(cope$latitude)
-
-ggplot() +
-  geom_sf(data = world1) +
-  geom_point(data = dat_std, aes(x = longitude, y = latitude), col = "grey20") +
-  coord_sf(xlim = c(100, 180), ylim =  c(-67, -10)) +
-  labs(y = expression(paste("latitude (" ^o, "N)"))) +
-  theme_bw()
-### code for mapping using maps package
-# map(database = 'world',xlim = c(100, 160), ylim = c(-67, -10),
-#     col = 'grey', fill = T, border = NA)
-# points(cope$longitude, cope$latitude, cex = 0.5, col = 'grey20')
-# 
-# axis(2, las = 1, ylim = c(-65, -10), cex.axis = 0.7)
-# ylabel <- expression(paste("latitude (" ^o, "N)"))
-# text(85, -35, ylabel, xpd = NA, srt = 90, cex = 0.8)
-```
-## rastervis 
