@@ -16,6 +16,8 @@ library(tidyverse)
 
 ## instructions:
 SCCS_R_workshop_2019.html
+# extra model checking stuff from the full day workshop:
+http://www.seascapemodels.org/data/data-wrangling-spatial-course.html
 
 ```{r load data}
 dat_raw <- read_csv("/Users/leslieroberson/OneDrive - The University of Queensland/_data/_raw_data/SCCS_Workshop_2019/SCCS_data-for-course/copepods_raw.csv")
@@ -178,7 +180,118 @@ dplyr provides a useful set of functions for joining data frames by matching col
 
 Today we will use inner_join to join dat to the routes data using columns with the same names to match by. It will keep all rows from dat where there are matching rows in routes, so if rows don’t match, they will be removed (use left_join if you want to keep rows in dat that don’t match too). inner_join will also duplicate rows if there are multiple matches so after joining two dataframes always check that the join worked as expected!
 
-So learning about joins has given Prof Calanoid time to write back to us about the figure we sent earlier. The results are junk as we suspected. Prof Calanoid has now explained that we need to standardize richness estimates, because silks from different routes have different sizes.
+# Turns out the copepod data was junk:
+Prof Calanoid has now explained that we need to standardize richness estimates, because silks from different routes have different sizes.
 
 Prof Calanoid had already provided the silk sizes in a file Route-data.csv, but neglected to tell us we needed to use this for a standardisation. No worries though, we can use our join skills to match the routes data and silk sizes to our richness data and then the standardization will be easy… right?
+
+```{r import route data}
+### import route data
+routes_raw <- read_csv("/Users/leslieroberson/OneDrive - The University of Queensland/_data/_raw_data/SCCS_Workshop_2019/SCCS_data-for-course/Route-data.csv")
+
+routes <- routes_raw
+
+names(routes)
+```
+use inner_join (making sure we check the number or rows stays the same)
+
+```{r inner_join}
+# inner_join will 'guess' the variables by which to join the two datasets
+dat_std <- inner_join(x = dat, y = routes)
+
+# but safer practise is to explicitly state the join by variables 
+dat_std <- inner_join(x = dat, y = routes, by = c("project", "route", "meanlong", "region"))
+
+# number of rows before join
+nrow(dat)
+# and after the join:
+nrow(dat_std)
+```
+Um, how come the number rows has increased after the join?
+
+## Dangerous joins
+Joins are a very important but very dangerous data wrangling operation! You must always choose your join type carefully. For instance, inner_join vs left_join vs full_join will all give the same result for some datasets, but not others.
+
+So let’s do a bit more of a thorough check of the routes data:
+
+```{r length unique}
+nrow(routes)
+## [1] 28
+# how many different routes are there?
+length(unique(routes$route))
+## [1] 25
+```
+Oops. The routes data has duplicate entries. So let’s now check if duplicated routes have some matching data:
+
+```{r duplicated}
+### identify duplicated routes
+idup <- duplicated(routes$route)
+
+### extracted duplicated route names
+dup_routes <- routes$route[idup]
+
+### select rows where 'route' matches any of the route names listed in dup_routes (?'%in%')
+filter(routes, route %in% dup_routes)
+```
+Luckily the duplicated routes have the same values for all variables (e.g., silk_area); if they didn’t we’d have to go back to the data provider and find out which ones were correct. But since they are the same, we can just remove the duplicates. This is easy with a dplyr function distinct(), which selects distinct entries:
+
+```{r distinct}
+routes2 <- distinct(routes)
+
+nrow(routes2)
+```
+Our routes2 dataframe now consiss of 25 rows which is the same as the number of unique routes (length(unique(routes$route))). Great! Now try the join again, and do a few checks to make sure it worked as expected.
+
+```{r}
+dat_std <- inner_join(x = dat, y = routes2, by = c("project", "route", "meanlong", "region"))
+### number of rows before join
+nrow(dat)
+## [1] 5313
+### number of rows after join
+nrow(dat_std)
+## [1] 5313
+sum(dat$segment_no == dat_std$segment_no)
+## [1] 5313
+# TRUE = 1 so for every time this is true you get a 1 so the sum should be the number of rows because they should all match and be true
+```
+## Add new variables with mutate
+Once we have a matching silk_area value for each sample, it is easy to add a new variable that is standardised richness. 
+To do this we use mutate which takes existing variables and calculates a new variable (or overwrites an existing one if we give it the same name). 
+In addition to the standardised variables, we will also calculate the number of species per individual observed.
+
+```{r mutate}
+dat_std <-  
+  mutate(dat_std,
+         region = factor(region, levels = c("East", "West", "Southern Ocean")),
+         richness = richness_raw / silk_area)
+```
+We’ve also made region a factor, which means we get to choose the order of the levels. This will be handy later.
+
+Ok, let’s plot standardized richness so we can send a new graph to Prof Calanoid:
+
+```{r ggplot}
+ggplot(data = dat_std, 
+       aes(x = latitude, y = richness)) +
+  geom_point() + 
+  geom_smooth() # trendline
+```
+The little message informs us that the spline is cubic regression spline (‘cs’) made with ‘gam’ (generalized additive model).
+
+We can also fit a linear model, but a linear relationship is clearly not a good fit to these data:
+
+```{r geom_smooth}
+ggplot(dat_std, aes(x = latitude, y = richness, color = richness)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+```
+Important: this is good for visual checking, but doesn’t tell us much about how the model performed. To do that we need to go back to the basic R code for building that model. We won’t do this today, but these additional steps can be found in the full course full course.
+
+http://www.seascapemodels.org/data/data-wrangling-spatial-course.html
+
+We should also save the standardised data for use later:
+
+```{r write_csv}
+write_csv(x = dat_std, path = "SSCS_data/spatial-data/copepods_standardised.csv")
+```
+
 
