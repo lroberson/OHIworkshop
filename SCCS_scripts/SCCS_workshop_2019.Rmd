@@ -25,8 +25,150 @@ dat <- dat_raw
 names(dat)
 ```
 
-```{r}
+## reshape data
 
+```{r reshape}
+# go from wide to long
+dat <- 
+  gather(data = dat, 
+         key = region, value = richness_raw, East, `Southern Ocean`, West, # make a region column and put the three regions as factor levels in that variable
+         na.rm = TRUE) # had heaps of NAs where they didn't take any samples
+
+head(dat)
 ```
 
+## visual error checking
+look at the spatial distribution of samples
+
+```{r ggplot}
+# This plot simply shows the location of every segment. You can kind of see the CPR surveys wrapping around the coast of Australia.
+ggplot(data = dat, 
+       mapping = aes(x = longitude, y = latitude)) + # I like being explicit with the data = and mapping =
+  geom_point()
+# You can read the above line as: Take dat, create an aes (aesthetic) where the x-axis is longitude and the y-axis is latitude, and finally add (+) a points layer (geom_point).
+
+# We will add a group command to make sure lines from different silks aren’t connected
+# bc the same silk sampling line had many samples at differnet lat long coords along the line
+ggplot(data = dat, 
+       aes(x = longitude, y = latitude, group = silk_id)) + # try without the group = silk_id to see big black blobs of samples -- it doesn't know which points to connect, connects them all left to right or something
+  geom_line() # plot lines instead of points
+```
+
+## colour the silk IDs:
+
+# Add a theme layer here to remove the legend. 
+Bc there are so many silk values that the legend ends up WAY bigger than the plot itself. 
+# wrap factor around silk_id in the colour command
+so that silk IDs (which are numbers) would be treated as discrete color levels, rather than a continuous measure
+
+```{r color factor}
+ggplot(data = dat, 
+       aes(x = longitude, y = latitude, group = silk_id, color = factor(silk_id))) +
+  geom_line() +
+  theme(legend.position = "none")
+```
+
+## Checks on richness
+So far so good, now let’s look at the richness data, our main variable for analysis
+plot locations again, but this time colour points by copepod species richness
+
+```{r color factor}
+ggplot(data = dat, 
+       aes(x = longitude, y = latitude, color = richness_raw)) +
+  geom_point()
+```
+Looks the same as before, but note the legend, which is now coloured by species richness. One of the smart things that  ggplot2 does is automatically scale axes based on the range of all the data we’ve plotted. This means our locations always fit nicely within the space of the map.
+
+The colours are also an ‘axis’, note that ggplot has them going to all the way to about -1000. This is a bit odd, and suggests that there are richness values that are close to -1000 (though we might not be able to see them under the other points). Obviously we can’t have negative species richness values, that makes no sense.
+
+Let’s try another plot of latitude versus richness to see if we can figure out what is going on
+
+```{r look for errors}
+ggplot(dat, aes(x = latitude, y = richness_raw)) +
+  geom_point()
+```
+Ah, so most of the data are smallish (<100) positive values. But there are maybe three values near -1000
+
+## Let’s use logical comparisons to learn more about these outliers
+
+Logical comparisons evaluate to TRUE or FALSE. Here is a list of several useful operators for conducting logical comparisons in R:
+
+< (less than) and <= (less than or equal to)
+
+> (greater than) and >= (greater than or equal to)
+
+== (equal to) and != (equal to)
+
+& (AND) and | (OR) and ! (NOT)
+
+```{r}
+### This operation will return a TRUE or FALSE for every observation depending on if `richness_raw` is less than zero (TRUE) or not (FALSE) 
+dat$richness_raw < 0 #prints out every result
+```
+Rather than print out every TRUE/FALSE individually, we can use table to count up the number of rows that have values less than (TRUE) or greater than (FALSE) zero
+
+```{r table}
+table(dat$richness_raw < 0)
+```
+We can fold dat_input$richness_raw < 0 back into a call to the data-frame to see what those rows are:
+
+```{r filter}
+filter(dat, richness_raw < 0 )
+```
+From this we can see that all negative values are -999. In some programs, this value indicates missing data. 
+
+Turns out they should actually be richness_raw = 0.
+
+So what we need to do now is change all the -999 to 0.
+
+Perhaps the most familiar way for to do this is to use a spreadsheet editor to fix the -999. But that is slow and tedious with large datasets and is *not repeatable*.
+
+What we want to do is use R to identify the mistakes, then correct them and create a new data frame. *So let’s use our logical indexing again:*
+
+```{r indexing}
+### replace negative values with 0
+dat$richness_raw[dat$richness_raw < 0] <- 0
+```
+Let’s have a look at our graphs again:
+
+```{r ggplot}
+ggplot(data = dat, 
+       aes(x = longitude, y = latitude, color = richness_raw)) +
+  geom_point(size = 0.4)
+```
+Looks better (note the scale of the colour axis).
+
+You might want to use logical indexing to double check all the values are really positive. This command will ask if any value is <0:
+
+```{r filter}
+dat %>% filter(richness_raw < 0) # nope, all good. 
+```
+
+At this point we might want to save the ‘corrected’ data frame as an external file, then only work with that one in the future:
+```{r write csv}
+write_csv(x = dat, path = "SSCS_data/copepods_corrected.csv")
+```
+Let’s do the latitude plot too. This is a really key plot for us, because we know that temperatures tend to get warmer at lower latitudes. So, if Prof Calanoid’s hypothesis is right, we would expect to see a decline in richness at higher latitudes:
+
+```{r ggplot}
+ggplot(data = dat, 
+       aes(x = latitude, y = richness_raw)) +
+  geom_point()
+```
+Something looks odd with this graph (and the map too), because we expected a strong gradient in richness with latitude. Well, at least we have some results.
+
+Saving ggplots
+Let’s save this figure and email it to Prof Calanoid to get their opinion:
+
+```{r ggsave}
+### a convenient aspect of ggplot is that plots can be assigned to objects (cope_graph in this case) and used later...
+cope_graph <- 
+  ggplot(data = dat, aes(x = latitude, y = richness_raw)) +
+  geom_point()
+
+### ... like when it comes time to save the figure
+ggsave(plot = cope_graph, filename = "figs/richness-latitude.png",
+       width = 16, height = 10, units = "cm", dpi = 300)
+```
+ggsave is a function for saving plots generated by ggplot. Try ?ggsave to see all the options for changing the figure size, resolution, or file type.
 
