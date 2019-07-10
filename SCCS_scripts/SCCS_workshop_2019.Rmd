@@ -19,6 +19,14 @@ SCCS_R_workshop_2019.html
 
 ```{r load data}
 dat_raw <- read_csv("/Users/leslieroberson/OneDrive - The University of Queensland/_data/_raw_data/SCCS_Workshop_2019/SCCS_data-for-course/copepods_raw.csv")
+
+dat <- dat_raw
+
+names(dat)
+```
+
+```{r}
+
 ```
 
 
