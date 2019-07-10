@@ -5,6 +5,8 @@ date: "7/10/2019"
 output: html_document
 ---
 
+good resource: https://geocompr.robinlovelace.net/
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -15,7 +17,8 @@ library(maps) # install.packages("maps")
 library(maptools) # install.packages("maptools")
 library(rgeos)
 library(mapproj) # install.packages("mapproj")
-library(rastervis) # install.packages("mapproj")
+library(raster) # install.packages("raster")
+library(RColorBrewer)
 ```
 
 ## Introduction to mapping and spatial analysis in R
@@ -87,4 +90,98 @@ ggplot() +
 # ylabel <- expression(paste("latitude (" ^o, "N)"))
 # text(85, -35, ylabel, xpd = NA, srt = 90, cex = 0.8)
 ```
-## rastervis 
+
+The code for mapping using ggplot is very similar to the plots we produced earlier. For mapping, the key layers (or geoms) are  geom_sf, which adds the world map sf dataframe to the figure, and coord_sf, which sets the longitude/latitude limits of the maps. coord_sf can also be used to change the projection of sf data (see ?coord_sf).
+
+For the maps code, the command axis(2, ...) added a vertical axis (use axis(1) for an x-axis). We set the ylimits of the axis and also shrunk the labels slightly using cex.axis = 0.7. We created a ylabel using expression so we could create a degree symbol. Then we added that label to the existing plot using text() at the given coordinates of x = 112 and y = -35. The command srt=90 rotates the text 90 degrees and xpd = NA allows the text to be plotted outside of the axes window. Without the xpd command, only text that was inside the map would show up. Check out ?axis if you want to make further modifications to this axis.
+
+Viewing raster data
+Our aim was to uncover the relationship between temperature and copepod richness. To do that we need some spatial data on temperature, so we can extract temperature at the sampling sites.
+
+We have provided you with two files MeanAVHRRSST.gri and MeanAVHRRSST.grd which contain gridded maps of annual mean sea surface temperature from the Hadley dataset. Gridded data, also known as raster data, can be read and manipulated with the raster package. 
+
+```{r load data}
+rsst <- raster(x = '/Users/leslieroberson/OneDrive - The University of Queensland/_data/_raw_data/SCCS_Workshop_2019/SCCS_data-for-course/spatial-data/MeanAVHRRSST')
+
+plot(rsst)
+```
+This creates a pretty decent first plot of the raster. However, note the colour scale isn’t that appropriate for temperatures - green where temperatures are high and red where they are low. Further, these default colours wouldn’t be that great if our audience was red-green colour blind.
+
+First up, let’s re-create the above plot using ggplot. We need to turn the raster into a dataframe to do that
+
+```{r grid}
+dat_grid <- 
+  data.frame(xyFromCell(rsst, 1:ncell(rsst)),
+             vals = rsst[]) %>%
+  as_tibble()
+```
+Then we can plot that dataframe (still a grid), using ggplot:
+
+```{r brewer.pal}
+ggplot() +
+  geom_sf(data = world1) +
+  geom_point(data = dat_std, aes(x = longitude, y = latitude)) +
+  coord_sf(xlim = c(100, 180), ylim =  c(-67, -10)) +
+  labs(y = expression(paste("latitude (" ^o, "N)"))) +
+  geom_tile(data = dat_grid, aes(x = x, y = y, fill = vals)) 
+
+?brewer.pal
+```
+If you click the link to colorbrewer.org you will be taken to an interactive web browser for choosing colour palettes.
+
+We can also access RColorBrewer directly through ggplot with scale_fill_brewer (for discrete colours -- I think equivalent to scale_color_manual()) and  scale_fill_distiller (for continuous colours, I think equivalent to scale_color_gradient()):
+
+```{r geom_tile heatmap}
+ggplot(data = dat_grid, aes(x = x, y = y, fill = vals)) +
+  geom_tile() + # this has something to do with making heatmaps
+  scale_fill_distiller(type = "seq", palette = "RdPu",
+                        direction = 1) +
+  theme_dark()
+```
+I think the sequential palettes are a good choice for temperatures. Sequential palettes like Reds are most appropriate when our data has a linear scale. You may also see some people use palettes like RdBu (red-blue). However, such palettes are diverging and would give the impression that there is a breakpoint at ~12 degrees, where the colours change from red to blue. In this case there is nothing special about 12 degrees temperatures, so a sequential palette is more appropriate.
+
+Finally, we might want to add the sample points back on:
+
+```{r add points to heatmap}
+ggplot(data = dat_grid, aes(x = x, y = y, fill = vals)) +
+  geom_tile() +
+  scale_fill_distiller(type = "seq", palette = "RdPu",
+                       direction = 1) +
+  geom_point(data = dat_std, aes(x = longitude, y = latitude), fill = grey(0.5, 0.5), size = 0.5)+
+  theme_dark()
+```
+We need to be explicit about fill = grey(0.5, 0.5) in our call to geom_point here, because otherwise ggplot will try to use the values from the raster to fill, and will fail.
+
+##Changing the map projection
+ggplot can change map projections for us on the fly. For instance, to use an orthographic projection we can use coord_map. One trick here is that it can take a long time to transform projections for larger datasets.
+
+So we will simplify our raster first by aggregating it: (aggregating cells I think)
+
+```{r aggregate raster}
+rsst_blocky <- aggregate(rsst, 5)
+
+dat_block <- 
+  data.frame(xyFromCell(rsst_blocky,
+                        1:ncell(rsst_blocky)),
+             vals = rsst_blocky[]) %>%
+  as_tibble()
+```
+This will make our image a bit blockier, but will speed up image creation. If you have lots of time you can skip the aggregate. If your computer is slow, you might want to increase the 5 to a bigger number (like 20).
+
+Now the plot, we just add a projection feature:
+
+```{r change projection}
+ggplot(data = dat_block, aes(x = x, y = y, fill = vals)) +
+  geom_tile() +
+  scale_fill_distiller(type = "seq", palette = "RdPu",
+                       direction = 1) +
+  geom_point(data = dat_std, aes(x = longitude, y = latitude), fill = grey(0.8, 0.5), size = 0.5) +
+  theme_dark() +
+  coord_map("ortho", orientation = c(-40, 135, 0))
+```
+
+Oh dear, Tasmania has disappeared! Well, when we aggregated it aggregated Tassie right off the map. So we will look at fixing this problem below.
+
+Another way to do this is to transform the underlying data. Then we can do the transform once and save the data. This will save time if we want to replot the same map over and over.
+
+We won’t cover transforming projections here, except to say that for rasters you can transform the projection using  *projectRaster()* and for point (or polygon, or line) data you will want to use *st_transform()* from the sf package.

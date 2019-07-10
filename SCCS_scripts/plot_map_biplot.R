@@ -1,4 +1,10 @@
-######################################
+library(rasterVis) # https://cran.r-project.org/web/packages/rasterVis/rasterVis.pdf
+# complements the raster package
+library(lattice) # to graph multivariate relationships and use trellis graphs
+# http://www.sthda.com/english/wiki/lattice-graphs
+# https://www.statmethods.net/advgraphs/trellis.html
+
+#####################################
 #### Code written by Felipe Suarez ####
 #### Version 1:  01-04-2019       ####
 ######################################
@@ -18,6 +24,7 @@ library(rosm)
 library(ggspatial)#requires ggplot2 version >= 2.2.1.9000
 library("ggpubr")
 library("gridExtra")
+
 
 
 # Set working directory
