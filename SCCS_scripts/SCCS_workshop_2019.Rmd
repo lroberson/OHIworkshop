@@ -294,6 +294,13 @@ We should also save the standardised data for use later:
 ```{r write_csv}
 write_csv(x = dat_std, path = "SSCS_data/spatial-data/copepods_standardised.csv")
 ```
+
+## Load standardized data
+
+```{r read std data}
+dat_std <- read_csv("/Users/leslieroberson/github/OHI_SCCS_workshops/SCCS_data/copepods_standardised.csv")
+```
+
 ## Multipanel ggplots
 ggplot2 isn’t limited to single panel plots. And that is just as well, because we have a sneaking suspicion that Prof Calanoid might have neglected to tell us something else about the data.
 
@@ -403,5 +410,52 @@ dat_std %>%
   ggplot(aes(x = route, y = mean_rich)) +
   geom_linerange(aes(ymin = mean_rich - se_rich, ymax = mean_rich + se_rich)) +
   geom_point()
+```
+## Bonus material: Grouping and mutating
+Groups are also handy way to calculate percentages and proportions by groups (normally a fiddly operation). For instance, try this plot of proportional richness:
+
+
+```{r proportional richness plot}
+datprop <- mutate(dat_std, prop_rich = richness/max(richness))
+
+ggplot(datprop, aes(x = latitude, y = prop_rich)) +
+  geom_point() +
+  facet_grid(region~.)
+```
+And we get facets of richness as a proportion of the sample with the maximum overall richness. But what if we want to do the plots with proportions of the max within each region?
+
+Too easy, just group by region first:
+
+```{r}
+datg <- group_by(dat_std, region)
+datprop <- mutate(datg, prop_rich = richness/max(richness))
+
+ggplot(datprop, aes(x = latitude, y = prop_rich, color = richness)) +
+  geom_point() +
+  facet_grid(region~.)
+```
+values go all the way to 1 for every region, so proportional richness values are by regions now. (I added colours by richness just to be a bit fancy).
+
+## Standard errors
+Above we calculated standard deviations, but we might like to show standard errors too. Remember for the SE we have to calculate sample size first (SE = SD/sqrt(n)).
+
+The n() function is pretty handy for calculating samples sizes.
+
+```{r SEs}
+datg <- group_by(dat_std, route)
+dats <- summarize(datg,
+                  mean_rich = mean(richness),
+                  sd_rich = sd(richness),
+                  nsamples = n(),
+                  se_rich = sd_rich/sqrt(nsamples))
+```
+To explain. n() has just calculated the sample size by each group. Then we use that variable in our SE calculation (remember that we can use variables straight after we create them in mutate arguments).
+
+To see the results, lets do a ggplot with error bars on it:
+
+```{r ggplot error bars}
+ggplot(dats, aes(x = route, y = mean_rich)) +
+  geom_point() +
+  geom_linerange(aes(ymin = mean_rich - se_rich, ymax = mean_rich + se_rich))
 ```
 
